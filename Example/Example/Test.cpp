@@ -116,21 +116,21 @@ void test_SubMixer(std::string path) {
 	sound.setMixer("CUSTOM1");
 	sound.play();
 
-	while (Audio_System::getSubMixer_Volume("custom1") > 1.f) {
+	while (Audio_System::getSubMixerVolume("custom1") > 1.f) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		Audio_System::setSubMixer_Volume("custom1", Audio_System::getSubMixer_Volume("custom1") - 1.f);
+		Audio_System::setSubMixerVolume("custom1", Audio_System::getSubMixerVolume("custom1") - 1.f);
 	}
 }
 void test_SubMixer3D(std::string path) {
-	Audio_System::setSubMixer_Volume("Custom1", 100.f);
+	Audio_System::setSubMixerVolume("Custom1", 100.f);
 	Sound sound(path);
 	sound.setPosition(-25.f, 15.f, 0.f);
 	sound.setMixer("CUSTOM1");
 	sound.play();
 
-	while (Audio_System::getSubMixer_Volume("custom1") > 1.f) {
+	while (Audio_System::getSubMixerVolume("custom1") > 1.f) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
-		Audio_System::setSubMixer_Volume("custom1", Audio_System::getSubMixer_Volume("custom1") - 1.f);
+		Audio_System::setSubMixerVolume("custom1", Audio_System::getSubMixerVolume("custom1") - 1.f);
 	}
 }
 void test_Reverb(std::string path) {
@@ -145,7 +145,7 @@ void test_Reverb(std::string path) {
 void tests(std::string SoundPath)
 {
 	Audio_System::setListenerOrientation({ 0, 1, 0 }, { 0, 0, -1 });
-	Audio_System::setMaster_Volume(100.f);
+	Audio_System::setMasterVolume(100.f);
 
 
 	std::cout << "Test : play\n";

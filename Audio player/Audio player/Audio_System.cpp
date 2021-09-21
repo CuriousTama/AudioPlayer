@@ -49,12 +49,12 @@ bool Audio_System::removeSubMixer(std::string MixerName)
 	return false;
 }
 
-void Audio_System::setMaster_Volume(float volume)
+void Audio_System::setMasterVolume(float volume)
 {
 	m_pMaster->SetVolume(std::clamp(volume / 100.f, 0.f, 1.f));
 }
 
-void Audio_System::setSubMixer_Volume(std::string MixerName, float volume)
+void Audio_System::setSubMixerVolume(std::string MixerName, float volume)
 {
 	volume = std::clamp(volume, 0.f, 100.f);
 	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
@@ -65,7 +65,7 @@ void Audio_System::setSubMixer_Volume(std::string MixerName, float volume)
 }
 
 
-const float Audio_System::getMaster_Volume()
+const float Audio_System::getMasterVolume()
 {
 	float volume = 0.f;
 	m_pMaster->GetVolume(&volume);
@@ -161,7 +161,7 @@ const float Audio_System::getDefaultMaxDistance()
 	return m_DefaultMaxDistance;
 }
 
-const float Audio_System::getSubMixer_Volume(std::string MixerName)
+const float Audio_System::getSubMixerVolume(std::string MixerName)
 {
 	float volume = 0.f;
 	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);

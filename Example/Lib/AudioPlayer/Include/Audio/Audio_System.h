@@ -46,14 +46,14 @@ public:
 	 *
 	 * @param value between 0 and 100.
 	 */
-	static void setMaster_Volume(float);
+	static void setMasterVolume(float);
 
 	/*
 	 * Get the volume of the master Mixer.
 	 *
 	 * @return value between 0 and 100.
 	 */
-	static const float getMaster_Volume();
+	static const float getMasterVolume();
 
 
 
@@ -63,7 +63,7 @@ public:
 	 * @param name of the sub-mixer.
 	 * @param value between 0 and 100.
 	 */
-	static void setSubMixer_Volume(std::string, float);
+	static void setSubMixerVolume(std::string, float);
 
 	/*
 	 * Get the volume of a sub-mixer.
@@ -71,7 +71,7 @@ public:
 	 * @param name of the sub-mixer.
 	 * @return value between 0 and 100.
 	 */
-	static const float getSubMixer_Volume(std::string);
+	static const float getSubMixerVolume(std::string);
 
 
 
