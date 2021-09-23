@@ -27,11 +27,11 @@ Channel::Channel(const std::string Mixer, Sound& sound) : m_rSound(sound)
 	m_sendDescriptors[0].Flags = XAUDIO2_SEND_USEFILTER;	// LPF direct-path
 	m_sendDescriptors[1].Flags = XAUDIO2_SEND_USEFILTER;	// LPF reverb-path -- omit for better performance at the cost of less realistic occlusion
 
-	if (m_mixer != "MASTER" && Audio_System::getSubVoices().contains(m_mixer)) {
+	if (m_mixer != "master" && Audio_System::getSubVoices().contains(m_mixer)) {
 		m_sendDescriptors[0].pOutputVoice = Audio_System::getSubVoices()[m_mixer];
 	}
 	else {
-		m_mixer = "MASTER";
+		m_mixer = "master";
 		m_sendDescriptors[0].pOutputVoice = Audio_System::getMasterVoice();
 	}
 

@@ -20,7 +20,7 @@ bool Audio_System::addSubMixer(std::string MixerName)
 {
 	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
 
-	if (!m_SubVoices.contains(MixerName) && MixerName != "MASTER") {
+	if (!m_SubVoices.contains(MixerName) && MixerName != "master") {
 		m_pEngine->CreateSubmixVoice(&m_SubVoices[MixerName], 2, 44100);
 		return true;
 	}
@@ -32,7 +32,7 @@ bool Audio_System::removeSubMixer(std::string MixerName)
 {
 	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
 
-	if (m_SubVoices.contains(MixerName) && MixerName != "MASTER") {
+	if (m_SubVoices.contains(MixerName) && MixerName != "master") {
 		m_SubVoices[MixerName]->DestroyVoice();
 		m_SubVoices.erase(MixerName);
 
@@ -195,12 +195,12 @@ void Audio_System::play(Sound& sound)
 
 	std::string Target_Mixer(sound.getMixer());
 
-	if (Target_Mixer != "MASTER" && !m_SubVoices.contains(Target_Mixer)) {
-		sound.setMixer("MASTER");
+	if (Target_Mixer != "master" && !m_SubVoices.contains(Target_Mixer)) {
+		sound.setMixer("master");
 		Target_Mixer = sound.getMixer();
 	}
 
-	if (Target_Mixer == "MASTER" || m_SubVoices.contains(Target_Mixer)) {
+	if (Target_Mixer == "master" || m_SubVoices.contains(Target_Mixer)) {
 		if (m_activeChannelPtrs[Target_Mixer].size() < static_cast<size_t>(m_MaxChannelsPerMixer))
 		{
 			m_activeChannelPtrs[Target_Mixer].emplace_back(std::make_unique<Channel>(Target_Mixer, sound));
