@@ -49,6 +49,16 @@ bool Audio_System::removeSubMixer(std::string MixerName)
 	return false;
 }
 
+bool Audio_System::SubMixerFind(std::string MixerName)
+{
+	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
+	if (MixerName == "master") {
+		return true;
+	}
+
+	return m_SubVoices.contains(MixerName);
+}
+
 void Audio_System::setMasterVolume(float volume)
 {
 	m_pMaster->SetVolume(std::clamp(volume / 100.f, 0.f, 1.f));
@@ -61,6 +71,10 @@ void Audio_System::setSubMixerVolume(std::string MixerName, float volume)
 
 	if (m_SubVoices.contains(MixerName)) {
 		m_SubVoices[MixerName]->SetVolume(volume / 100.f);
+	}
+
+	if (MixerName == "master") {
+		setMasterVolume(volume);
 	}
 }
 
@@ -112,6 +126,20 @@ void Audio_System::setListenerForward(float x, float y, float z)
 void Audio_System::setListenerForward(X3DAUDIO_VECTOR forward)
 {
 	m_X3DListener.OrientFront = forward;
+	recalculate3D();
+}
+
+void Audio_System::setListenerTop(float x, float y, float z)
+{
+	m_X3DListener.OrientTop.x = x;
+	m_X3DListener.OrientTop.y = y;
+	m_X3DListener.OrientTop.z = z;
+	recalculate3D();
+}
+
+void Audio_System::setListenerTop(X3DAUDIO_VECTOR top)
+{
+	m_X3DListener.OrientTop = top;
 	recalculate3D();
 }
 
@@ -168,6 +196,9 @@ const float Audio_System::getSubMixerVolume(std::string MixerName)
 
 	if (m_SubVoices.contains(MixerName)) {
 		m_SubVoices[MixerName]->GetVolume(&volume);
+	}
+	if (MixerName == "master") {
+		return getMasterVolume();
 	}
 
 	return volume * 100.f;

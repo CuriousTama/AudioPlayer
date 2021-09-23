@@ -39,6 +39,13 @@ public:
 	 */
 	static bool removeSubMixer(std::string);
 
+	/*
+	 * check if a sub-mixer exist.
+	 *
+	 * @param name of the sub-mixer to check.
+	 * @return bool : if found.
+	 */
+	static bool SubMixerFind(std::string);
 
 
 	/*
@@ -130,6 +137,24 @@ public:
 
 
 	/*
+	 * Set the listener Top(Orientation).
+	 *
+	 * @param x positon.
+	 * @param y positon.
+	 * @param z positon.
+	 */
+	static void setListenerTop(float x, float y, float z);
+
+	/*
+	 * Set the listener Top(Orientation).
+	 *
+	* @param x, y and z vector.
+	 */
+	static void setListenerTop(X3DAUDIO_VECTOR top);
+
+
+
+	/*
 	 * Set the listener Orientation.
 	 *
 	 * @param x, y and z vector (Forward).
@@ -205,9 +230,29 @@ public:
 			return m_X3DListener.OrientFront;
 		}
 		else {
-			static_assert(std::is_constructible_v<T, float, float, float>, "getListenerPosition() template invalid.");
+			static_assert(std::is_constructible_v<T, float, float, float>, "getListenerForward() template invalid.");
 
 			return T(m_X3DListener.OrientFront.x, m_X3DListener.OrientFront.y, m_X3DListener.OrientFront.z);
+		}
+	}
+
+	/*
+	 * Give the listener Top(Orientation), x, y, z.
+	 *
+	 * @param T : template with contructor float, float, float.
+	 * @param Default = Vector3 (Float).
+	 *
+	 * @return T : Top(Orientation).
+	 */
+	template <typename T = X3DAUDIO_VECTOR>
+	static const T getListenerTop() {
+		if constexpr (std::is_same_v<T, decltype(m_X3DListener.OrientTop)>) {
+			return m_X3DListener.OrientTop;
+		}
+		else {
+			static_assert(std::is_constructible_v<T, float, float, float>, "getListenerTop() template invalid.");
+
+			return T(m_X3DListener.OrientTop.x, m_X3DListener.OrientTop.y, m_X3DListener.OrientTop.z);
 		}
 	}
 

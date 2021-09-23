@@ -198,7 +198,7 @@ void PrintInfos(Sound& Emitter, const int m_reverb) {
 		for (int x = 0; x < 25; x++) {
 
 			if (Audio_System::getListenerPosition().x == x && Audio_System::getListenerPosition().y == y) {
-				auto forward = Audio_System::getListenerForwad();
+				auto forward = Audio_System::getListenerForward();
 
 				if (forward.x == 1 && forward.y == 0) {
 					std::cout << "< ";
@@ -240,13 +240,13 @@ void PrintInfos(Sound& Emitter, const int m_reverb) {
 			std::cout << "\t\t\t Forward ";
 		}
 		else if (y == 5) {
-			std::cout << "\t\t\t x : " << Audio_System::getListenerForwad().x;
+			std::cout << "\t\t\t x : " << Audio_System::getListenerForward().x;
 		}
 		else if (y == 6) {
-			std::cout << "\t\t\t y : " << Audio_System::getListenerForwad().y;
+			std::cout << "\t\t\t y : " << Audio_System::getListenerForward().y;
 		}
 		else if (y == 7) {
-			std::cout << "\t\t\t z : " << Audio_System::getListenerForwad().z;
+			std::cout << "\t\t\t z : " << Audio_System::getListenerForward().z;
 		}
 
 		else if (y == 9) {
