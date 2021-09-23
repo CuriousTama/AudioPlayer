@@ -200,7 +200,7 @@ public:
 	 * @return T : Forward(Orientation).
 	 */
 	template <typename T = X3DAUDIO_VECTOR>
-	static const T getListenerForwad() {
+	static const T getListenerForward() {
 		if constexpr (std::is_same_v<T, decltype(m_X3DListener.OrientFront)>) {
 			return m_X3DListener.OrientFront;
 		}

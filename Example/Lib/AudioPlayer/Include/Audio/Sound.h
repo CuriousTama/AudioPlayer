@@ -347,7 +347,7 @@ public:
 	const X3DAUDIO_DSP_SETTINGS& getDSPInfos() const;
 
 private:
-	std::string m_Mixer{ "MASTER" };
+	std::string m_Mixer{ "master" };
 	std::mutex m_ChannelList_mutex;
 	std::vector<std::reference_wrapper<class Channel>> m_activeChannelPtrs;
 	bool m_loaded{ false };

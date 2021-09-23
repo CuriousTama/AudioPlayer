@@ -200,7 +200,7 @@ public:
 	 * @return T : Forward(Orientation).
 	 */
 	template <typename T = X3DAUDIO_VECTOR>
-	static const T getListenerForwad() {
+	static const T getListenerForward() {
 		if constexpr (std::is_same_v<T, decltype(m_X3DListener.OrientFront)>) {
 			return m_X3DListener.OrientFront;
 		}
@@ -272,9 +272,9 @@ public:
 
 
 	/*
-	 * Get path and FileProcessing.
+	 * Get sub-mixer name and sub-mixer.
 	 *
-	 * @return map with path and FileProcessing.
+	 * @return map with Get sub-mixer name and sub-mixer struct.
 	 */
 	static std::map<std::string, IXAudio2SubmixVoice*>& getSubVoices() {
 		return m_SubVoices;
@@ -351,7 +351,7 @@ public:
 
 
 	/*
-	 erase buffers if unused.
+	 Erase buffers if unused.
 	 */
 	static void updateBuffersLife() {
 		std::vector<std::filesystem::path> erraseList;
@@ -369,7 +369,7 @@ public:
 
 
 	/*
-	 * add and play a new channel of a sound.
+	 * Add and play a new channel of a sound.
 	 *
 	 * @param sound to play.
 	 */
