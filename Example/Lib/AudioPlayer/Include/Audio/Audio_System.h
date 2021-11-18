@@ -14,7 +14,7 @@
 #include "Channel.h"
 
 class Audio_System {
-
+	friend class Sound;
 public:
 
 	Audio_System() = delete;
@@ -299,6 +299,23 @@ private:
 	inline static constructor m_constructor; // constructor called automatically on lauching.
 
 	inline static std::map<std::filesystem::path, std::shared_ptr<class FileProcessing>> m_buffers;
+
+	static std::map<std::filesystem::path, std::shared_ptr<class FileProcessing>>& getBuffer_in() {
+		return m_buffers;
+	}
+
+	static void updateBuffersLife_in() {
+		std::vector<std::filesystem::path> erraseList;
+		for (const auto& [path, buffer] : m_buffers) {
+			if (buffer.use_count() <= 1) {
+				erraseList.push_back(path);
+			}
+		}
+
+		for (const auto& path : erraseList) {
+			m_buffers.erase(path);
+		}
+	}
 
 #ifdef _AUDIO_ADMIN_
 public:

@@ -86,6 +86,46 @@ public:
 	 */
 	bool loadFromFile(const std::filesystem::path);
 
+	/*
+	 * Load a sound file.
+	 *
+	 * @param FileProcessing Use.
+	 * @return bool : if successfully loaded.
+	 */
+	template <typename T>
+	bool loadFromFileProcessing(const std::filesystem::path path)
+	{
+		m_loaded = false;
+
+		if (std::filesystem::exists(path)) {
+			auto it = Audio_System::getBuffer_in().find(path);
+
+			this->stop();
+			this->m_file.reset();
+
+			if (it == std::end(Audio_System::getBuffer_in())) {
+				Audio_System::getBuffer_in()[path] = std::make_shared<T>();
+				this->m_file = Audio_System::getBuffer_in()[path];
+
+				if (this->m_file) {
+					m_loaded = this->m_file->load(path.string());
+				}
+			}
+			else {
+				this->m_file = it->second;
+				m_loaded = true;
+			}
+
+			Audio_System::updateBuffersLife_in();
+		}
+
+		if (!m_loaded) {
+			std::string error("[error] : Failed to open : " + path.string() + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+			throw std::exception(error.c_str());
+		}
+
+		return m_loaded;
+	}
 
 
 	/*
