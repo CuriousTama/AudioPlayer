@@ -5,8 +5,8 @@
 void example(std::string SoundPath);
 void tests(std::string SoundPath);
 
-int main(int argc, char** argv) try {
-
+int main(int argc, char** argv) try 
+{
 	std::string SoundPath;
 
 	// can load song by draggin a song file on the exe file.

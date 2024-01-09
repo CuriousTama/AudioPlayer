@@ -1,6 +1,7 @@
 #pragma once
 #include "FileProcessing.h"
 #include <variant>
+#include <array>
 
 /*
 	Audio Class :

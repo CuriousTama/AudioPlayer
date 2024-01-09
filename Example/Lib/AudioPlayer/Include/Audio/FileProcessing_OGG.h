@@ -3,6 +3,7 @@
 
 #include <vorbis/vorbisfile.h>
 #include <fstream>
+#include <array>
 
 class FileProcessing_OGG : public FileProcessing
 {
