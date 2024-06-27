@@ -7,7 +7,7 @@ C++20 is prerequisite for successfully compile.
 
 ## Documentation
 
-You have access to some tutorials [here](https://github.com/CuriousTama/AudioPlayer/wiki).<br />
+You have access to some tutorials [here](https://github.com/CuriousTama/AudioPlayer/wiki/Tutorials).<br />
 You can also find the source code of [audio player](https://github.com/CuriousTama/AudioPlayer/tree/main/Audio%20player) and a quick [example](https://github.com/CuriousTama/AudioPlayer/tree/main/Example) program made with it.
 
 ## About this project
