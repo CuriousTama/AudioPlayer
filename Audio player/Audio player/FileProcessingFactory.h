@@ -14,7 +14,7 @@ public:
     using Registery = std::unordered_map<FileExtension, CreateObjectFunc>;
 
     template<AudioHelper::DerivedOrSameType<FileProcessing> T>
-    void registerExtention(const FileExtension& _fileExtension);
+    void registerExtension(const FileExtension& _fileExtension);
 
     bool contains(const FileExtension& _fileExtension) const;
     std::unique_ptr<FileProcessing> create(const FileExtension& _fileExtension) const;
@@ -30,7 +30,7 @@ private:
 
 /////////////
 template<AudioHelper::DerivedOrSameType<FileProcessing> T>
-void FileProcessingFactory::registerExtention(const FileExtension& _fileExtension)
+void FileProcessingFactory::registerExtension(const FileExtension& _fileExtension)
 {
     FileExtension fileExtension = getUnifiedString(_fileExtension);
     m_registery[fileExtension] = FileProcessingFactory::createObject<T>;

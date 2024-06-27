@@ -240,9 +240,9 @@ bool Audio_System::containFile(const std::filesystem::path& path) const
 
 void Audio_System::registerDefaultProcessors()
 {
-    m_factory.registerExtention<FileProcessing_WAV>(".wav");
-    m_factory.registerExtention<FileProcessing_OGG>(".ogg");
-    m_factory.registerExtention<FileProcessing_MP3>(".mp3");
+    m_factory.registerExtension<FileProcessing_WAV>(".wav");
+    m_factory.registerExtension<FileProcessing_OGG>(".ogg");
+    m_factory.registerExtension<FileProcessing_MP3>(".mp3");
 }
 
 void Audio_System::play(Sound& sound)

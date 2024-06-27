@@ -34,6 +34,9 @@ public:
     // Get the existing instance of Audio_System.
     static Audio_System* getExistingInstance() { return m_instance; }
 
+    // Get the file factory.
+    FileProcessingFactory& getFileFactory() { return m_factory; }
+
     // Add a new sub-mixer.
     bool addSubMixer(const std::string& _subMixerName);
     // Remove a sub-mixer.
