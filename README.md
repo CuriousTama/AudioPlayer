@@ -5,12 +5,10 @@ Supported audio files extensions are [.wav](https://en.wikipedia.org/wiki/WAV), 
 
 C++20 is prerequisite for successfully compile. 
 
-You can access xaudio2 stuff and more with a [Define macro](https://github.com/Tama-sama/AudioPlayer/wiki). 
-
 ## Documentation
 
-See [wiki](https://github.com/Tama-sama/AudioPlayer/wiki).<br />
-You can also find the source code of [audio player](https://github.com/Tama-sama/AudioPlayer/tree/main/Audio%20player) and a quick [example](https://github.com/Tama-sama/AudioPlayer/tree/main/Example) program made with it.
+You have access to some tutorials [here](https://github.com/CuriousTama/AudioPlayer/wiki).<br />
+You can also find the source code of [audio player](https://github.com/CuriousTama/AudioPlayer/tree/main/Audio%20player) and a quick [example](https://github.com/CuriousTama/AudioPlayer/tree/main/Example) program made with it.
 
 ## About this project
 
@@ -18,7 +16,7 @@ This project is a project done between two years of school.<br />
 I started this project on a whim without knowing a lot about audio programming, so I learn on the job.
 
 ### Goal :
-- Make an audio player library that support some base sound formats and the user can extend it without modifying the source code.
+- Make an audio player library that support some base sound formats and the user can extend it without modifying the base code.
 
 ### Problem encounters and how I have resolved them : 
 - Process correctly Ogg and Mp3 files : use some dependencies.  
@@ -31,3 +29,7 @@ I started this project on a whim without knowing a lot about audio programming, 
 - Reinforced knowledge of the window library.
 - Reinforced file reading knowledge.
 - Clearly comment the code.
+
+### Additional Note
+With mid 2024 update I reworked how the code work, so no backward compatibility.<br />
+It was necessary for a way better readability, maintainability, memory management and to clean a lot of bad practices that was in there.

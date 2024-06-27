@@ -1,209 +1,227 @@
-#define _AUDIO_ADMIN_
 #include "FileProcessing_WAV.h"
-#include "Sound.h"
 #include "Channel.h"
+#include "Sound.h"
 #include <fstream>
 #include <iostream>
 
-FileProcessing_WAV::FileProcessing_WAV()
-{
-	m_Reset_data = std::make_unique<BYTE[]>(4);
-
-	for (int i = 0; i < 4; i++)
-	{
-		m_Reset_data[i] = 1;
-	}
-
-	m_Reset_Buffer.AudioBytes = 4;
-	m_Reset_Buffer.Flags = XAUDIO2_END_OF_STREAM;
-	m_Reset_Buffer.pAudioData = m_Reset_data.get();
-}
-
+// ----------------------------------------------
 FileProcessing_WAV::~FileProcessing_WAV()
 {
-	std::lock_guard<std::mutex> lock(m_TimeChanging_mutex);
+    std::lock_guard<std::mutex> lock(m_timeChanging_mutex);
 }
 
-bool FileProcessing_WAV::load(const std::string path)
+// ----------------------------------------------
+bool FileProcessing_WAV::load(const std::string& _path)
 {
-	int fileSize = 0;
-	std::unique_ptr<BYTE[]> pFileIn;
+    int fileSize = 0;
+    std::unique_ptr<BYTE[]> fileContent;
+    if (!getFileContent(_path, fileContent, fileSize))
+    {
+        std::string error("[error] : Failed to open : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+        throw std::exception(error.c_str());
+    }
 
-	{
-		//The data of a wave file is stored in little endian
-		std::ifstream file(path, std::ios::binary);
+    std::string validationResult = isFileValid(fileContent.get(), fileSize, _path);
+    if (validationResult.empty())
+    {
+        throw std::exception(validationResult.c_str());
+    }
 
-		if (!file) {
-			std::string error("[error] : Failed to open : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
+    if (!collectFileFormat(fileContent.get(), fileSize))
+    {
+        std::string error("[error] : fmt chunk not found : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+        throw std::exception(error.c_str());
+    }
 
-		file.seekg(0, std::ios::end);
-		fileSize = static_cast<int>(file.tellg());
-		file.seekg(0, std::ios::beg);
+    std::string formatValidationResult = isFormatValid(_path);
+    if (formatValidationResult.empty())
+    {
+        throw std::exception(formatValidationResult.c_str());
+    }
 
-		pFileIn = std::make_unique<BYTE[]>(fileSize);
-		file.read(std::bit_cast<char*>(pFileIn.get()), fileSize);
-	}
+    if (!collectData(fileContent.get(), fileSize))
+    {
+        std::string error("[error] : data chunk not found : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+        throw std::exception(error.c_str());
+    }
 
-	if (*std::bit_cast<const int*>(&pFileIn[0]) != 'FFIR') {
-		std::string error("[error] : bad fourCC : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-		throw std::exception(error.c_str());
-	}
-
-	else if (fileSize <= 44) { // 44 is start of data chunk
-		std::string error("[error] : file too small : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-		throw std::exception(error.c_str());
-	}
-
-	else if (*std::bit_cast<const int*>(&pFileIn[8]) != 'EVAW') {
-		std::string error("[error] : format not WAVE : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-		throw std::exception(error.c_str());
-	}
-
-	//look for 'fmt ' chunk id
-	//WAVEFORMATEX format;
-	bool bFilledFormat = false;
-	for (size_t i = 12; i < static_cast<size_t>(fileSize); ) {
-		if (*std::bit_cast<const int*>(&pFileIn[i]) == ' tmf') {
-			memcpy(&m_format, &pFileIn[i + 8], sizeof(m_format));
-			bFilledFormat = true;
-			break;
-		}
-		// chunk size + size entry size + chunk id entry size + word padding
-		i += (*std::bit_cast<const int*>(&pFileIn[i + 4]) + 9) & 0xFFFFFFFE;
-	}
-
-	if (!bFilledFormat) {
-		std::string error("[error] : fmt chunk not found : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-		throw std::exception(error.c_str());
-	}
-
-	// compare format with sound system format
-	{
-		if (m_format.wFormatTag != WAVE_FORMAT_PCM) {
-			std::string error("[error] : bad wave format (wFormatTag) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-		else if (m_format.nChannels != 1 && m_format.nChannels != 2) {
-			std::string error("[error] : bad wave format (nChannels) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-		else if (m_format.wBitsPerSample != 8 && m_format.wBitsPerSample != 16 && m_format.wBitsPerSample != 24 && m_format.wBitsPerSample != 32) {
-			std::string error("[error] : bad wave format (wBitsPerSample) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-		else if (m_format.nSamplesPerSec <= 0) {
-			std::string error("[error] : bad wave format (nSamplesPerSec) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-
-		else if (m_format.nBlockAlign != m_format.nChannels * (m_format.wBitsPerSample / 8)) {
-			std::string error("[error] : bad wave format (nBlockAlign) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-		else if (m_format.nAvgBytesPerSec != m_format.nChannels * m_format.nSamplesPerSec * (m_format.wBitsPerSample / 8)) {
-			std::string error("[error] : bad wave format (nAvgBytesPerSec) : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-			throw std::exception(error.c_str());
-		}
-
-		m_format.cbSize = 0;
-	}
-
-	//look for 'data' chunk id
-	for (size_t i = 12; i < static_cast<size_t>(fileSize);) {
-		const int chunkSize = *std::bit_cast<const int*>(&pFileIn[i + 4]);
-		if (*std::bit_cast<const int*>(&pFileIn[i]) == 'atad') {
-			m_pData = std::make_unique<BYTE[]>(chunkSize);
-			m_NumBytes = chunkSize;
-			memcpy(m_pData.get(), &pFileIn[i + 8], m_NumBytes);
-
-			return true;
-		}
-		// chunk size + size entry size + chunk id entry size + word padding
-		i += (chunkSize + 9) & 0xFFFFFFFE;
-	}
-
-	std::string error("[error] : data chunk not found : " + path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
-	throw std::exception(error.c_str());
+    return true;
 }
 
-bool FileProcessing_WAV::OnBufferEnd(Channel& channel)
+bool FileProcessing_WAV::getFileContent(const std::string& _path, std::unique_ptr<BYTE[]>& _fileContent, int& _fileSize) const
 {
-	std::lock_guard<std::mutex> lock(m_TimeChanging_mutex);
-	auto it = std::find_if(std::begin(m_Timechanging), std::end(m_Timechanging), [&channel](Channel& _channel) { return &channel == &_channel; });
-	bool TimeChange = it != std::end(m_Timechanging);
+    std::ifstream file(_path, std::ios::binary);
 
-	if (channel.getSound().isLooping() && !channel.isForcedStop()) {
-		std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+    if (!file)
+        return false;
 
-		channel.getAudioBuffer().PlayBegin = 0;
-		channel.getSourceVoice()->SubmitSourceBuffer(&m_Reset_Buffer, nullptr);
-		channel.getSourceVoice()->SubmitSourceBuffer(&channel.getAudioBuffer(), nullptr);
-	}
-	else if (TimeChange) {
-		m_Timechanging.erase(it);
-	}
-	else {
-		return true;
-	}
+    file.seekg(0, std::ios::end);
+    _fileSize = static_cast<int>(file.tellg());
+    file.seekg(0, std::ios::beg);
 
-	return false;
+    _fileContent = std::make_unique<BYTE[]>(_fileSize);
+    file.read(std::bit_cast<char*>(_fileContent.get()), _fileSize);
+
+    return true;
 }
 
-double FileProcessing_WAV::fileDuration()
+// ----------------------------------------------
+std::string FileProcessing_WAV::isFileValid(const BYTE* _fileData, int _fileSize, const std::string& _path) const
 {
-	if (m_format.nSamplesPerSec != 0) {
-		return (m_NumBytes * 2 / m_format.nChannels) / static_cast<double>(m_format.nSamplesPerSec) / 4.0;
-	}
+    if (*std::bit_cast<const int*>(&_fileData[0]) != 'FFIR')
+        return std::string("[error] : bad fourCC : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
 
-	return 0.0;
+    if (_fileSize <= 44) // 44 is start of data chunk
+        return std::string("[error] : file too small : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (*std::bit_cast<const int*>(&_fileData[8]) != 'EVAW')
+        return std::string("[error] : format not WAVE : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    return "";
 }
 
-double FileProcessing_WAV::currentPlayTime(Channel& channel)
+// ----------------------------------------------
+bool FileProcessing_WAV::collectFileFormat(const BYTE* _fileData, int _fileSize)
 {
-	if (m_format.nSamplesPerSec != 0) {
-		std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+    bool bFilledFormat = false;
+    for (size_t i = 12; i < static_cast<size_t>(_fileSize);)
+    {
+        if (*std::bit_cast<const int*>(&_fileData[i]) == ' tmf')
+        {
+            memcpy(&m_format, &_fileData[i + 8], sizeof(m_format));
+            bFilledFormat = true;
+            break;
+        }
+        // chunk size + size entry size + chunk id entry size + word padding
+        i += (*std::bit_cast<const int*>(&_fileData[i + 4]) + 9) & 0xFFFFFFFE;
+    }
 
-		XAUDIO2_VOICE_STATE tmp;
-		channel.getSourceVoice()->GetState(&tmp);
+    m_format.cbSize = 0;
 
-		return (channel.getAudioBuffer().PlayBegin + tmp.SamplesPlayed) / static_cast<double>(m_format.nSamplesPerSec);
-	}
-
-	return 0.0;
+    return bFilledFormat;
 }
 
+// ----------------------------------------------
+std::string FileProcessing_WAV::isFormatValid(const std::string& _path) const
+{
+    if (m_format.wFormatTag != WAVE_FORMAT_PCM)
+        return std::string("[error] : bad wave format (wFormatTag) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (m_format.nChannels != 1 && m_format.nChannels != 2)
+        return std::string("[error] : bad wave format (nChannels) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (m_format.wBitsPerSample != 8 && m_format.wBitsPerSample != 16 && m_format.wBitsPerSample != 24 && m_format.wBitsPerSample != 32)
+        return std::string("[error] : bad wave format (wBitsPerSample) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (m_format.nSamplesPerSec <= 0)
+        return std::string("[error] : bad wave format (nSamplesPerSec) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (m_format.nBlockAlign != m_format.nChannels * (m_format.wBitsPerSample / 8))
+        return std::string("[error] : bad wave format (nBlockAlign) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    if (m_format.nAvgBytesPerSec != m_format.nChannels * m_format.nSamplesPerSec * (m_format.wBitsPerSample / 8))
+        return std::string("[error] : bad wave format (nAvgBytesPerSec) : " + _path + "\n[File] " + __FILE__ + "\n[Line] " + std::to_string(__LINE__));
+
+    return "";
+}
+
+// ----------------------------------------------
+bool FileProcessing_WAV::collectData(const BYTE* _fileData, int _fileSize)
+{
+    for (size_t i = 12; i < static_cast<size_t>(_fileSize);)
+    {
+        const int chunkSize = *std::bit_cast<const int*>(&_fileData[i + 4]);
+        if (*std::bit_cast<const int*>(&_fileData[i]) == 'atad')
+        {
+            m_pData = std::make_unique<BYTE[]>(chunkSize);
+            m_numBytes = chunkSize;
+            memcpy(m_pData.get(), &_fileData[i + 8], m_numBytes);
+
+            return true;
+        }
+        // chunk size + size entry size + chunk id entry size + word padding
+        i += (chunkSize + 9) & 0xFFFFFFFE;
+    }
+
+    return false;
+}
+
+// ----------------------------------------------
+bool FileProcessing_WAV::onBufferEnd(Channel& channel)
+{
+    std::lock_guard<std::mutex> lock(m_timeChanging_mutex);
+    auto it = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel)
+                           { return &channel == &_channel; });
+    bool TimeChange = it != std::end(m_timeChanging);
+
+    if (channel.getSound().isLooping() && !channel.isForcedStop())
+    {
+        std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+
+        channel.getAudioBuffer().PlayBegin = 0;
+        channel.getSourceVoice()->SubmitSourceBuffer(&channel.getAudioBuffer(), nullptr);
+    }
+    else if (TimeChange)
+    {
+        m_timeChanging.erase(it);
+    }
+    else
+    {
+        return true;
+    }
+
+    return false;
+}
+
+// ----------------------------------------------
+double FileProcessing_WAV::getFileDuration() const
+{
+    if (m_format.nSamplesPerSec == 0)
+        return 0.0;
+
+    return (m_numBytes * 2 / m_format.nChannels) / static_cast<double>(m_format.nSamplesPerSec) / 4.0;
+}
+
+// ----------------------------------------------
+double FileProcessing_WAV::currentPlayTime(Channel& channel) const
+{
+    if (m_format.nSamplesPerSec == 0)
+        return 0.0;
+
+    std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+
+    XAUDIO2_VOICE_STATE tmp;
+    channel.getSourceVoice()->GetState(&tmp);
+
+    return (channel.getAudioBuffer().PlayBegin + tmp.SamplesPlayed) / static_cast<double>(m_format.nSamplesPerSec);
+}
+
+// ----------------------------------------------
 void FileProcessing_WAV::setPlayTime(Channel& channel, double time)
 {
-	{
-		std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
-		std::lock_guard<std::mutex> lock2(m_TimeChanging_mutex);
+    {
+        std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+        std::lock_guard<std::mutex> lock2(m_timeChanging_mutex);
 
-		m_Timechanging.push_back(channel);
-		channel.getSourceVoice()->Stop();
-		channel.getSourceVoice()->FlushSourceBuffers();
-	}
+        m_timeChanging.push_back(channel);
+        channel.getSourceVoice()->Stop();
+        channel.getSourceVoice()->FlushSourceBuffers();
+    }
 
-	bool waitingReset = false;
-	do
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-		std::lock_guard<std::mutex> lock(m_TimeChanging_mutex);
-		waitingReset = std::find_if(std::begin(m_Timechanging), std::end(m_Timechanging), [&channel](Channel& _channel) { return &channel == &_channel; }) != std::end(m_Timechanging);
+    bool waitingReset = false;
+    do
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::lock_guard<std::mutex> lock(m_timeChanging_mutex);
+        waitingReset = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel)
+                                    { return &channel == &_channel; }) != std::end(m_timeChanging);
 
-	} while (waitingReset);
+    } while (waitingReset);
 
-	{
-		std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
-		channel.getSourceVoice()->SubmitSourceBuffer(&m_Reset_Buffer, nullptr);
-		channel.getAudioBuffer().PlayBegin = static_cast<UINT32>(m_format.nSamplesPerSec * time);
-		channel.getSourceVoice()->SubmitSourceBuffer(&channel.getAudioBuffer(), nullptr);
-		channel.getSourceVoice()->Start();
-	}
+    {
+        std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());
+        channel.getAudioBuffer().PlayBegin = static_cast<UINT32>(m_format.nSamplesPerSec * time);
+        channel.getSourceVoice()->SubmitSourceBuffer(&channel.getAudioBuffer(), nullptr);
+        channel.getSourceVoice()->Start();
+    }
 }

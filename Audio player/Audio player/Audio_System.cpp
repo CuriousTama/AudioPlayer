@@ -1,274 +1,311 @@
-#define _AUDIO_ADMIN_
 #include "Audio_System.h"
-#include "Sound.h"
 #include "Channel.h"
+#include "Sound.h"
 #include <iostream>
+
+#include "FileProcessing_MP3.h"
+#include "FileProcessing_OGG.h"
+#include "FileProcessing_WAV.h"
+
+Audio_System::Audio_System()
+{
+    assert(m_instance == nullptr && "There should be only one instance of Audio_System alive at the same time");
+
+    // constructor
+    std::ignore = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+    XAudio2Create(&m_pEngine);
+    m_pEngine->CreateMasteringVoice(&m_pMaster, 2, 44100);
+
+    DWORD dwChannelMask;
+    m_pMaster->GetChannelMask(&dwChannelMask);
+    X3DAudioInitialize(dwChannelMask, X3DAUDIO_SPEED_OF_SOUND, m_X3DInstance);
+
+    m_X3DListener.OrientFront.z = 1.0f;
+    m_X3DListener.OrientTop.y = 1.0f;
+    m_X3DListener.pCone = nullptr;
+    // //
+
+    registerDefaultProcessors();
+
+    m_instance = this;
+}
 
 Audio_System::~Audio_System()
 {
-	m_pEngine->StopEngine();
-	m_pMaster->DestroyVoice();
-	m_activeChannelPtrs.clear();
-	m_buffers.clear();
+    m_pEngine->StopEngine();
+    m_pMaster->DestroyVoice();
+    
+    for (auto [name, voice] : m_subVoices)
+    {
+        voice->DestroyVoice();
+    }
 
-	CoUninitialize();
+    m_activeChannelPtrs.clear();
+    m_buffers.clear();
+    m_pEngine->Release();
 
-	std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
+    CoUninitialize();
+
+    std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
+    m_instance = nullptr;
 }
 
-bool Audio_System::addSubMixer(std::string MixerName)
+bool Audio_System::addSubMixer(const std::string& _subMixerName)
 {
-	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
+    if (!m_subVoices.contains(_subMixerName) && _subMixerName != "master")
+    {
+        m_pEngine->CreateSubmixVoice(&m_subVoices[_subMixerName], 2, 44100);
+        return true;
+    }
 
-	if (!m_SubVoices.contains(MixerName) && MixerName != "master") {
-		m_pEngine->CreateSubmixVoice(&m_SubVoices[MixerName], 2, 44100);
-		return true;
-	}
-
-	return false;
+    return false;
 }
 
-bool Audio_System::removeSubMixer(std::string MixerName)
+bool Audio_System::removeSubMixer(const std::string& _subMixerName)
 {
-	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
+    if (m_subVoices.contains(_subMixerName) && _subMixerName != "master")
+    {
+        m_subVoices[_subMixerName]->DestroyVoice();
+        m_subVoices.erase(_subMixerName);
 
-	if (m_SubVoices.contains(MixerName) && MixerName != "master") {
-		m_SubVoices[MixerName]->DestroyVoice();
-		m_SubVoices.erase(MixerName);
+        while (!m_activeChannelPtrs[_subMixerName].empty())
+        {
+            for (auto& c : m_activeChannelPtrs[_subMixerName])
+            {
+                removeChannel(*c);
+            }
+        }
 
-		while (!m_activeChannelPtrs[MixerName].empty()) {
-			for (auto& c : m_activeChannelPtrs[MixerName]) {
-				removeChannel_(*c);
-			}
-		}
+        m_activeChannelPtrs.erase(_subMixerName);
+        return true;
+    }
 
-		m_activeChannelPtrs.erase(MixerName);
-		return true;
-	}
-
-	return false;
+    return false;
 }
 
-bool Audio_System::SubMixerFind(std::string MixerName)
+bool Audio_System::doesSubMixerExist(const std::string& _subMixerName) const
 {
-	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
-	if (MixerName == "master") {
-		return true;
-	}
+    if (_subMixerName == "master")
+    {
+        return true;
+    }
 
-	return m_SubVoices.contains(MixerName);
+    return m_subVoices.contains(_subMixerName);
 }
 
 void Audio_System::setMasterVolume(float volume)
 {
-	m_pMaster->SetVolume(std::clamp(volume / 100.f, 0.f, 1.f));
+    m_pMaster->SetVolume(std::clamp(volume / 100.f, 0.f, 1.f));
 }
 
-void Audio_System::setSubMixerVolume(std::string MixerName, float volume)
+float Audio_System::getMasterVolume() const
 {
-	volume = std::clamp(volume, 0.f, 100.f);
-	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
+    float volume = 0.f;
+    m_pMaster->GetVolume(&volume);
 
-	if (m_SubVoices.contains(MixerName)) {
-		m_SubVoices[MixerName]->SetVolume(volume / 100.f);
-	}
-
-	if (MixerName == "master") {
-		setMasterVolume(volume);
-	}
+    return volume * 100.f;
 }
 
-
-const float Audio_System::getMasterVolume()
+void Audio_System::setSubMixerVolume(const std::string& _subMixerName, float _volume)
 {
-	float volume = 0.f;
-	m_pMaster->GetVolume(&volume);
+    _volume = std::clamp(_volume, 0.f, 100.f);
 
-	return volume * 100.f;
+    if (m_subVoices.contains(_subMixerName))
+    {
+        m_subVoices[_subMixerName]->SetVolume(_volume / 100.f);
+    }
+
+    if (_subMixerName == "master")
+    {
+        setMasterVolume(_volume);
+    }
 }
 
-void Audio_System::setListenerPosition(float x, float y, float z)
+float Audio_System::getSubMixerVolume(const std::string& _subMixerName) const
 {
-	m_X3DListener.Position = X3DAUDIO_VECTOR(x, y, z);
-	recalculate3D();
+    float volume = 0.f;
+
+    if (m_subVoices.contains(_subMixerName))
+    {
+        m_subVoices.at(_subMixerName)->GetVolume(&volume);
+    }
+    if (_subMixerName == "master")
+    {
+        return getMasterVolume();
+    }
+
+    return volume * 100.f;
 }
 
-void Audio_System::setListenerPosition(X3DAUDIO_VECTOR pos)
+void Audio_System::setListenerPosition(float _x, float _y, float _z)
 {
-	m_X3DListener.Position = pos;
-	recalculate3D();
+    m_X3DListener.Position = X3DAUDIO_VECTOR{ _x, _y, _z };
+    recalculate3D();
 }
 
-void Audio_System::moveListenerPosition(float x, float y, float z)
+void Audio_System::setListenerPosition(X3DAUDIO_VECTOR _pos)
 {
-	m_X3DListener.Position.x += x;
-	m_X3DListener.Position.y += y;
-	m_X3DListener.Position.z += z;
-	recalculate3D();
+    m_X3DListener.Position = _pos;
+    recalculate3D();
 }
 
-void Audio_System::moveListenerPosition(X3DAUDIO_VECTOR pos)
+void Audio_System::moveListenerPosition(float _x, float _y, float _z)
 {
-	m_X3DListener.Position.x += pos.x;
-	m_X3DListener.Position.y += pos.y;
-	m_X3DListener.Position.z += pos.z;
-	recalculate3D();
+    m_X3DListener.Position.x += _x;
+    m_X3DListener.Position.y += _y;
+    m_X3DListener.Position.z += _z;
+    recalculate3D();
 }
 
-void Audio_System::setListenerForward(float x, float y, float z)
+void Audio_System::moveListenerPosition(X3DAUDIO_VECTOR _pos)
 {
-	m_X3DListener.OrientFront.x = x;
-	m_X3DListener.OrientFront.y = y;
-	m_X3DListener.OrientFront.z = z;
-	recalculate3D();
+    m_X3DListener.Position.x += _pos.x;
+    m_X3DListener.Position.y += _pos.y;
+    m_X3DListener.Position.z += _pos.z;
+    recalculate3D();
+}
+
+void Audio_System::setListenerOrientation(X3DAUDIO_VECTOR _forward, X3DAUDIO_VECTOR _topDirection)
+{
+    m_X3DListener.OrientFront = _forward;
+    m_X3DListener.OrientTop = _topDirection;
+    recalculate3D();
+}
+
+void Audio_System::setListenerOrientation(X3DAUDIO_VECTOR _forward, float _topDir_x, float _topDir_y, float _topDir_z)
+{
+    setListenerOrientation(_forward, { _topDir_x, _topDir_y, _topDir_z });
+}
+
+void Audio_System::setListenerOrientation(float _fwd_x, float _fwd_y, float _fwd_z, X3DAUDIO_VECTOR _topDirection)
+{
+    setListenerOrientation({ _fwd_x, _fwd_y, _fwd_z }, _topDirection);
+}
+
+void Audio_System::setListenerOrientation(float _fwd_x, float _fwd_y, float _fwd_z, float _topDir_x, float _topDir_y, float _topDir_z)
+{
+    setListenerOrientation({ _fwd_x, _fwd_y, _fwd_z }, { _topDir_x, _topDir_y, _topDir_z });
 }
 
 void Audio_System::setListenerForward(X3DAUDIO_VECTOR forward)
 {
-	m_X3DListener.OrientFront = forward;
-	recalculate3D();
+    m_X3DListener.OrientFront = forward;
+    recalculate3D();
 }
 
-void Audio_System::setListenerTop(float x, float y, float z)
+void Audio_System::setListenerForward(float _x, float _y, float _z)
 {
-	m_X3DListener.OrientTop.x = x;
-	m_X3DListener.OrientTop.y = y;
-	m_X3DListener.OrientTop.z = z;
-	recalculate3D();
+    setListenerForward({ _x, _y, _z });
 }
 
-void Audio_System::setListenerTop(X3DAUDIO_VECTOR top)
+void Audio_System::setListenerTop(X3DAUDIO_VECTOR _top)
 {
-	m_X3DListener.OrientTop = top;
-	recalculate3D();
+    m_X3DListener.OrientTop = _top;
+    recalculate3D();
 }
 
-void Audio_System::setListenerOrientation(X3DAUDIO_VECTOR forward, X3DAUDIO_VECTOR TopOfHead)
+void Audio_System::setListenerTop(float _x, float _y, float _z)
 {
-	m_X3DListener.OrientFront = forward;
-	m_X3DListener.OrientTop = TopOfHead;
-	recalculate3D();
-}
-
-void Audio_System::setListenerOrientation(float f_x, float f_y, float f_z, X3DAUDIO_VECTOR TopOfHead)
-{
-	m_X3DListener.OrientFront.x = f_x;
-	m_X3DListener.OrientFront.y = f_y;
-	m_X3DListener.OrientFront.z = f_z;
-	m_X3DListener.OrientTop = TopOfHead;
-	recalculate3D();
-}
-
-void Audio_System::setListenerOrientation(X3DAUDIO_VECTOR forward, float t_x, float t_y, float t_z)
-{
-	m_X3DListener.OrientFront = forward;
-	m_X3DListener.OrientTop.x = t_x;
-	m_X3DListener.OrientTop.y = t_y;
-	m_X3DListener.OrientTop.z = t_z;
-	recalculate3D();
-}
-
-void Audio_System::setListenerOrientation(float f_x, float f_y, float f_z, float t_x, float t_y, float t_z)
-{
-	m_X3DListener.OrientFront.x = f_x;
-	m_X3DListener.OrientFront.y = f_y;
-	m_X3DListener.OrientFront.z = f_z;
-	m_X3DListener.OrientTop.x = t_x;
-	m_X3DListener.OrientTop.y = t_y;
-	m_X3DListener.OrientTop.z = t_z;
-	recalculate3D();
+    setListenerTop({ _x, _y, _z });
 }
 
 void Audio_System::setDefaultMaxDistance(float maxDistance)
 {
-	m_DefaultMaxDistance = maxDistance;
+    m_DefaultMaxDistance = maxDistance;
 }
 
-const float Audio_System::getDefaultMaxDistance()
+void Audio_System::removeChannel(const Channel& channel)
 {
-	return m_DefaultMaxDistance;
+    std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
+
+    const std::string Target_Mixer = channel.getMixerName();
+
+    auto it = std::find_if(std::begin(m_activeChannelPtrs[Target_Mixer]), std::end(m_activeChannelPtrs[Target_Mixer]),
+                           [&channel](const std::unique_ptr<Channel>& pChan)
+                           {
+                               return &channel == pChan.get();
+                           });
+
+    if (it != std::end(m_activeChannelPtrs[Target_Mixer]))
+    {
+        m_activeChannelPtrs[Target_Mixer].erase(it);
+    }
 }
 
-const float Audio_System::getSubMixerVolume(std::string MixerName)
+bool Audio_System::containFile(const std::filesystem::path& path) const
 {
-	float volume = 0.f;
-	std::transform(std::begin(MixerName), std::end(MixerName), std::begin(MixerName), tolower);
-
-	if (m_SubVoices.contains(MixerName)) {
-		m_SubVoices[MixerName]->GetVolume(&volume);
-	}
-	if (MixerName == "master") {
-		return getMasterVolume();
-	}
-
-	return volume * 100.f;
+    return m_buffers.find(path) != m_buffers.end();
 }
 
-void Audio_System::removeChannel_(Channel& channel)
+void Audio_System::registerDefaultProcessors()
 {
-	std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
-
-	const std::string Target_Mixer = channel.getMixerName();
-
-	auto it = std::find_if(std::begin(m_activeChannelPtrs[Target_Mixer]), std::end(m_activeChannelPtrs[Target_Mixer]),
-		[&channel](const std::unique_ptr<Channel>& pChan) {
-			return &channel == pChan.get();
-		});
-
-	if (it != std::end(m_activeChannelPtrs[Target_Mixer])) {
-		m_activeChannelPtrs[Target_Mixer].erase(it);
-	}
+    m_factory.registerExtention<FileProcessing_WAV>(".wav");
+    m_factory.registerExtention<FileProcessing_OGG>(".ogg");
+    m_factory.registerExtention<FileProcessing_MP3>(".mp3");
 }
 
 void Audio_System::play(Sound& sound)
 {
-	std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
+    std::lock_guard<std::mutex> lock(m_ChannelList_mutex);
 
-	std::string Target_Mixer(sound.getMixer());
+    std::string Target_Mixer(sound.getMixer());
 
-	if (Target_Mixer != "master" && !m_SubVoices.contains(Target_Mixer)) {
-		sound.setMixer("master");
-		Target_Mixer = sound.getMixer();
-	}
+    if (Target_Mixer != "master" && !m_subVoices.contains(Target_Mixer))
+    {
+        sound.setMixer("master");
+        Target_Mixer = sound.getMixer();
+    }
 
-	if (Target_Mixer == "master" || m_SubVoices.contains(Target_Mixer)) {
-		if (m_activeChannelPtrs[Target_Mixer].size() < static_cast<size_t>(m_MaxChannelsPerMixer))
-		{
-			m_activeChannelPtrs[Target_Mixer].emplace_back(std::make_unique<Channel>(Target_Mixer, sound));
-			try {
-				m_activeChannelPtrs[Target_Mixer].back()->play();
-			}
-			catch (...) {
-				m_activeChannelPtrs[Target_Mixer].pop_back();
-				throw;
-			}
-		}
-	}
+    if (Target_Mixer == "master" || m_subVoices.contains(Target_Mixer))
+    {
+        if (m_activeChannelPtrs[Target_Mixer].size() < static_cast<size_t>(m_MaxChannelsPerMixer))
+        {
+            m_activeChannelPtrs[Target_Mixer].emplace_back(std::make_unique<Channel>(*this, Target_Mixer, sound));
+            try
+            {
+                m_activeChannelPtrs[Target_Mixer].back()->play();
+            }
+            catch (...)
+            {
+                m_activeChannelPtrs[Target_Mixer].pop_back();
+                throw;
+            }
+        }
+    }
 }
 
+XAUDIO2_VOICE_DETAILS Audio_System::getVoiceDetails()
+{
+    XAUDIO2_VOICE_DETAILS deviceDetails;
+    m_pMaster->GetVoiceDetails(&deviceDetails);
+    return deviceDetails;
+}
+
+void Audio_System::updateBuffersLife()
+{
+    std::vector<std::filesystem::path> erraseList;
+    for (const auto& [path, buffer] : m_buffers)
+    {
+        if (buffer.use_count() <= 1)
+        {
+            erraseList.push_back(path);
+        }
+    }
+
+    for (const auto& path : erraseList)
+    {
+        m_buffers.erase(path);
+    }
+}
 
 void Audio_System::recalculate3D()
 {
-	for (auto& [mixer, Vec_channel] : m_activeChannelPtrs) {
-		for (auto& channel : Vec_channel) {
-			channel->calculate3D();
-		}
-	}
-}
-
-
-Audio_System::constructor::constructor()
-{
-	std::ignore = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-	XAudio2Create(&Audio_System::m_pEngine);
-	Audio_System::m_pEngine->CreateMasteringVoice(&Audio_System::m_pMaster, 2, 44100);
-
-	DWORD dwChannelMask;
-	Audio_System::m_pMaster->GetChannelMask(&dwChannelMask);
-	X3DAudioInitialize(dwChannelMask, X3DAUDIO_SPEED_OF_SOUND, Audio_System::m_X3DInstance);
-
-	m_X3DListener.OrientFront.z = 1.0f;
-	m_X3DListener.OrientTop.y = 1.0f;
-	m_X3DListener.pCone = nullptr;
+    for (auto& [mixer, Vec_channel] : m_activeChannelPtrs)
+    {
+        for (auto& channel : Vec_channel)
+        {
+            channel->calculate3D();
+        }
+    }
 }
