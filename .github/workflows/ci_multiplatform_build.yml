@@ -17,16 +17,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest, macos-latest, ubuntu-latest]
+        incude:
+          - platform: windows-latest
+            build_examples: "ON"
+          - platform: macos-latest
+            build_examples: "OFF"
+          - platform: ubuntu-latest
+            build_examples: "OFF"
 
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: true
         
-    - name: Build
+    - name: Build Lib (and examples on Windows only)
       run: |
         mkdir build 
         cd build
-        cmake .. -DBUILD_EXAMPLES=ON
+        cmake .. -DBUILD_EXAMPLES=${{ matrix.build_examples }}
         cmake --build . --config ${{env.BUILD_TYPE}}
