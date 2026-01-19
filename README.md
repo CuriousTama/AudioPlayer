@@ -5,21 +5,23 @@ Supported audio files extensions are [.wav](https://en.wikipedia.org/wiki/WAV), 
 
 C++20 is prerequisite for successfully compile. 
 
+You can find the build instructions [here](https://github.com/CuriousTama/AudioPlayer/tree/main/BUILDING.md).
+
 ## Documentation
 
 You have access to some tutorials [here](https://github.com/CuriousTama/AudioPlayer/wiki/Tutorials).<br />
-You can also find the source code of [audio player](https://github.com/CuriousTama/AudioPlayer/tree/main/Audio%20player) and a quick [example](https://github.com/CuriousTama/AudioPlayer/tree/main/Example) program made with it.
+You can also find the source code of [audio player](https://github.com/CuriousTama/AudioPlayer/tree/main/src/audioPlayer) and a quick [example](https://github.com/CuriousTama/AudioPlayer/tree/main/src/example) program made with it.
 
 ## About this project
 
-This project is a project done between two years of school.<br />
+This project started as a project I did between two years of school.<br />
 I started this project on a whim without knowing a lot about audio programming, so I learn on the job.
 
 ### Goal :
 - Make an audio player library that support some base sound formats and the user can extend it without modifying the base code.
 
 ### Problem encounters and how I have resolved them : 
-- Process correctly Ogg and Mp3 files : use some dependencies.  
+- Process correctly .Ogg and .Mp3 files : use some dependencies.  
 - 3D Sound : Documentation.
 
 ### What I've learned :
