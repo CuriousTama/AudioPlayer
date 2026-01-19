@@ -1,0 +1,9 @@
+[submodule "External/minimp3"]
+	path = External/minimp3
+	url = https://github.com/lieff/minimp3.git
+[submodule "External/vorbis"]
+	path = External/vorbis
+	url = https://github.com/xiph/vorbis.git
+[submodule "External/ogg"]
+	path = External/ogg
+	url = https://github.com/xiph/ogg.git
