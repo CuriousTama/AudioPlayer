@@ -150,8 +150,10 @@ bool FileProcessing_WAV::collectData(const BYTE* _fileData, int _fileSize)
 bool FileProcessing_WAV::onBufferEnd(Channel& channel)
 {
     std::lock_guard<std::mutex> lock(m_timeChanging_mutex);
-    auto it = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel)
-                           { return &channel == &_channel; });
+    auto it = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel) {
+        return &channel == &_channel;
+    });
+
     bool TimeChange = it != std::end(m_timeChanging);
 
     if (channel.getSound().isLooping() && !channel.isForcedStop())
@@ -213,10 +215,9 @@ void FileProcessing_WAV::setPlayTime(Channel& channel, double time)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         std::lock_guard<std::mutex> lock(m_timeChanging_mutex);
-        waitingReset = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel)
-                                    { return &channel == &_channel; }) != std::end(m_timeChanging);
-
-    } while (waitingReset);
+        waitingReset = std::find_if(std::begin(m_timeChanging), std::end(m_timeChanging), [&channel](Channel& _channel) { return &channel == &_channel; }) != std::end(m_timeChanging);
+    }
+    while (waitingReset);
 
     {
         std::lock_guard<std::mutex> lock(channel.getSourceVoiceMutex());

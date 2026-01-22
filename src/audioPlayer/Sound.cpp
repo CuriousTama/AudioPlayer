@@ -131,8 +131,9 @@ Sound::~Sound()
     {
         std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
 
-        std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel)
-                      { channel.stop(); });
+        std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel) {
+            channel.stop();
+        });
     }
 
     bool allChannelsDeactivated = false;
@@ -140,7 +141,8 @@ Sound::~Sound()
     {
         std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
         allChannelsDeactivated = m_channelHandles.empty();
-    } while (!allChannelsDeactivated);
+    }
+    while (!allChannelsDeactivated);
 
     this->m_file.reset();
 
@@ -210,22 +212,25 @@ void Sound::play()
 void Sound::resume()
 {
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel)
-                  { channel.resume(); });
+    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel) {
+        channel.resume();
+    });
 }
 
 void Sound::pause()
 {
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel)
-                  { channel.pause(); });
+    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel) {
+        channel.pause();
+    });
 }
 
 void Sound::stop()
 {
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel)
-                  { channel.stop(); });
+    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel) {
+        channel.stop();
+    });
 }
 
 void Sound::setMixer(std::string _mixerName)
@@ -239,8 +244,9 @@ void Sound::setVolume(float volume)
     m_volume = std::clamp(volume, 0.f, 100.f);
 
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [this](Channel& channel)
-                  { channel.setVolume(m_volume); });
+    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [this](Channel& channel) {
+        channel.setVolume(m_volume);
+    });
 }
 
 void Sound::setSpeed(float speed)
@@ -248,8 +254,9 @@ void Sound::setSpeed(float speed)
     m_speed = std::clamp(speed, 0.1f, 200.f);
 
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [this](Channel& channel)
-                  { channel.setSpeed(m_speed); });
+    std::for_each(std::begin(m_channelHandles), std::end(m_channelHandles), [this](Channel& channel) {
+        channel.setSpeed(m_speed);
+    });
 }
 
 double Sound::getAudioDuration() const
@@ -367,8 +374,10 @@ void Sound::addChannel(Channel& channel)
 void Sound::removeChannel(Channel& channel)
 {
     std::lock_guard<std::mutex> lock(m_channelHandles_mutex);
-    auto it = std::find_if(std::begin(m_channelHandles), std::end(m_channelHandles), [&channel](Channel& _channel)
-                           { return &channel == &_channel; });
+    auto it = std::find_if(std::begin(m_channelHandles), std::end(m_channelHandles), [&channel](Channel& _channel) {
+        return &channel == &_channel;
+    });
+
     if (it != std::end(m_channelHandles))
     {
         m_channelHandles.erase(it);
@@ -389,8 +398,9 @@ Sound::Statut Sound::getStatus() const
     }
     else
     {
-        auto num_paused = std::count_if(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel)
-                                        { return channel.getSpeed() <= 0.05f; });
+        auto num_paused = std::count_if(std::begin(m_channelHandles), std::end(m_channelHandles), [](Channel& channel) {
+            return channel.getSpeed() <= 0.05f;
+        });
 
         if (num_paused == 0)
         {

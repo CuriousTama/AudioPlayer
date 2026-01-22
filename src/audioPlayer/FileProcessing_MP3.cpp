@@ -1,6 +1,6 @@
 #if (!MINIMP3_ONLY_SIMD) && _MSC_VER
     /* x64 always have SSE2, arm64 always have neon, no need for generic code */
-    #define MINIMP3_ONLY_SIMD // error in x86 platform if not defined 
+    #define MINIMP3_ONLY_SIMD // error in x86 platform if not defined
 #endif // (!MINIMP3_ONLY_SIMD) && _MSC_VER
 
 #define MINIMP3_IMPLEMENTATION
