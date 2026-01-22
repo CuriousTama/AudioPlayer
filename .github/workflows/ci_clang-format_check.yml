@@ -1,0 +1,26 @@
+name: "CI"
+
+# This is a CI workflow that check if every source files are clang-format compliant
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  formatting-check:
+    name: clang-format Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+  
+    - name: Run clang-format style check
+      uses: jidicula/clang-format-action@v4.15.0
+      with:
+        clang-format-version: '20'
+        check-path: 'src'
+        fallback-style: 'Microsoft'
