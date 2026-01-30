@@ -1,13 +1,30 @@
 ---
 AccessModifierOffset: '-4'
 AlignEscapedNewlines: Right
+AlignTrailingComments:
+  Kind: Leave
 AllowShortBlocksOnASingleLine: 'false'
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: Inline
 AllowShortLoopsOnASingleLine: 'false'
 AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: 'Yes'
-BreakBeforeBraces: Allman
+BraceWrapping:
+  BeforeLambdaBody: false
+  AfterNamespace: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterObjCDeclaration: false
+  AfterClass: true
+  AfterFunction: true
+  BeforeWhile: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: true
+  BeforeElse: true
+  AfterControlStatement: Always
+BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: 'true'
 BreakConstructorInitializers: BeforeComma
 BreakInheritanceList: BeforeComma
@@ -25,8 +42,7 @@ MaxEmptyLinesToKeep: '1'
 NamespaceIndentation: All
 PointerAlignment: Left
 ReflowComments: 'false'
-SortIncludes: 'true'
-SortUsingDeclarations: 'true'
+SortIncludes: 'false'
 SpaceAfterCStyleCast: 'false'
 SpaceAfterLogicalNot: 'false'
 SpaceAfterTemplateKeyword: 'false'
@@ -45,5 +61,4 @@ SpacesInSquareBrackets: 'false'
 Standard: Cpp11
 TabWidth: '4'
 UseTab: Never
-
-...
+... 

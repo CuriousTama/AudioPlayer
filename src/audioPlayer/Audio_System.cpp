@@ -35,7 +35,7 @@ Audio_System::~Audio_System()
 {
     m_pEngine->StopEngine();
     m_pMaster->DestroyVoice();
-    
+
     for (auto [name, voice] : m_subVoices)
     {
         voice->DestroyVoice();
@@ -222,8 +222,7 @@ void Audio_System::removeChannel(const Channel& channel)
     const std::string Target_Mixer = channel.getMixerName();
 
     auto it = std::find_if(std::begin(m_activeChannelPtrs[Target_Mixer]), std::end(m_activeChannelPtrs[Target_Mixer]),
-                           [&channel](const std::unique_ptr<Channel>& pChan)
-                           {
+                           [&channel](const std::unique_ptr<Channel>& pChan) {
                                return &channel == pChan.get();
                            });
 

@@ -98,8 +98,8 @@ Channel::~Channel()
                     }
                 }
             }
-
-        } while (!DeactivatedEveryWhere);
+        }
+        while (!DeactivatedEveryWhere);
 
         m_pSource->Stop();
         m_pSource->DestroyVoice();
